@@ -694,15 +694,16 @@ def get_user_labels(current_labels: List[str] = None):
 
 def get_max_tokens(model):
     settings = get_settings()
-    if model in MAX_TOKENS:
-        max_tokens_model = MAX_TOKENS[model]
-    else:
-        raise Exception(f"MAX_TOKENS must be set for model {model} in ./pr_agent/algo/__init__.py")
+    max_model_tokens = settings.config.max_model_tokens if settings.config.max_model_tokens else 0
+    model_max_default = MAX_TOKENS.get(model, 0)
+    if max_model_tokens == model_max_default == 0:
+        raise Exception(
+            f"MAX_TOKENS must be set for model {model} in ./pr_agent/algo/__init__.py or set max_model_tokens in config")
 
-    if settings.config.max_model_tokens:
-        max_tokens_model = min(settings.config.max_model_tokens, max_tokens_model)
-        # get_logger().debug(f"limiting max tokens to {max_tokens_model}")
-    return max_tokens_model
+    if min(max_model_tokens, model_max_default) == 0:
+        return max(max_model_tokens, model_max_default)
+    else:
+        return min(max_model_tokens, model_max_default)
 
 
 def clip_tokens(text: str, max_tokens: int, add_three_dots=True, num_input_tokens=None, delete_last_line=False) -> str:

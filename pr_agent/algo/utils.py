@@ -705,7 +705,10 @@ def _fix_key_value(key: str, value: str):
 
 def load_yaml(response_text: str, keys_fix_yaml: List[str] = [], first_key="", last_key="") -> dict:
     response_text_original = copy.deepcopy(response_text)
-    response_text = response_text.strip('\n').removeprefix('```yaml').rstrip().removesuffix('```')
+    last_yaml_start = response_text.rindex('```yaml') + 7
+    last_yaml_end = response_text.rindex('```')
+    response_text= response_text[last_yaml_start:last_yaml_end].strip()
+    
     try:
         data = yaml.safe_load(response_text)
     except Exception as e:

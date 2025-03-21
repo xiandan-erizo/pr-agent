@@ -1,3 +1,5 @@
+`Platforms supported: GitHub, GitLab, Bitbucket`
+
 ## Overview
 
 The `implement` tool converts human code review discussions and feedback into ready-to-commit code changes.
@@ -8,8 +10,9 @@ It leverages LLM technology to transform PR comments and review suggestions into
 
 ### For Reviewers
 
-Reviewers can request code changes by: <br>
-1. Selecting the code block to be modified. <br>
+Reviewers can request code changes by:
+
+1. Selecting the code block to be modified.
 2. Adding a comment with the syntax: 
 ```
 /implement <code-change-description>
@@ -44,7 +47,8 @@ You can reference and implement changes from any comment by:
 Note that the implementation will occur within the review discussion thread.
 
 
-**Configuration options** <br>
-- Use `/implement` to implement code change within and based on the review discussion. <br>
-- Use `/implement <code-change-description>` inside a review discussion to implement specific instructions. <br>
-- Use `/implement <link-to-review-comment>` to indirectly call the tool from any comment. <br>
+**Configuration options**
+
+- Use `/implement` to implement code change within and based on the review discussion.
+- Use `/implement <code-change-description>` inside a review discussion to implement specific instructions.
+- Use `/implement <link-to-review-comment>` to indirectly call the tool from any comment.

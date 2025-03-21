@@ -134,8 +134,18 @@ class PRDescription:
                 pr_body += "<hr>\n\n<details> <summary><strong>✨ Describe tool usage guide:</strong></summary><hr> \n\n"
                 pr_body += HelpMessage.get_describe_usage_guide()
                 pr_body += "\n</details>\n"
-            elif get_settings().pr_description.enable_help_comment:
-                pr_body += '\n\n___\n\n> 💡 **PR-Agent usage**: Comment `/help "your question"` on any pull request to receive relevant information'
+            elif get_settings().pr_description.enable_help_comment and self.git_provider.is_supported("gfm_markdown"):
+                if isinstance(self.git_provider, GithubProvider):
+                    pr_body += ('\n\n___\n\n> <details> <summary>  Need help?</summary><li>Type <code>/help how to ...</code> '
+                                'in the comments thread for any questions about PR-Agent usage.</li><li>Check out the '
+                                '<a href="https://qodo-merge-docs.qodo.ai/usage-guide/">documentation</a> '
+                                'for more information.</li></details>')
+                else: # gitlab
+                    pr_body += ("\n\n___\n\n<details><summary>Need help?</summary>- Type <code>/help how to ...</code> in the comments "
+                                "thread for any questions about PR-Agent usage.<br>- Check out the "
+                                "<a href='https://qodo-merge-docs.qodo.ai/usage-guide/'>documentation</a> for more information.</details>")
+            # elif get_settings().pr_description.enable_help_comment:
+            #     pr_body += '\n\n___\n\n> 💡 **PR-Agent usage**: Comment `/help "your question"` on any pull request to receive relevant information'
 
             # Output the relevant configurations if enabled
             if get_settings().get('config', {}).get('output_relevant_configurations', False):
@@ -318,7 +328,10 @@ class PRDescription:
                 original_prediction_dict = {"pr_files": original_prediction_loaded}
             else:
                 original_prediction_dict = original_prediction_loaded
-            filenames_predicted = [file['filename'].strip() for file in original_prediction_dict.get('pr_files', [])]
+            if original_prediction_dict:
+                filenames_predicted = [file.get('filename', '').strip() for file in original_prediction_dict.get('pr_files', [])]
+            else:
+                filenames_predicted = []
 
             # extend the prediction with additional files not included in the original prediction
             pr_files = self.git_provider.get_diff_files()
@@ -358,8 +371,12 @@ class PRDescription:
             if counter_extra_files > 0:
                 get_logger().info(f"Adding {counter_extra_files} unprocessed extra files to table prediction")
                 prediction_extra_dict = load_yaml(prediction_extra, keys_fix_yaml=self.keys_fix)
-                if isinstance(original_prediction_dict, dict) and isinstance(prediction_extra_dict, dict):
-                    original_prediction_dict["pr_files"].extend(prediction_extra_dict["pr_files"])
+                if original_prediction_dict and isinstance(original_prediction_dict, dict) and \
+                        isinstance(prediction_extra_dict, dict) and "pr_files" in prediction_extra_dict:
+                    if "pr_files" in original_prediction_dict:
+                        original_prediction_dict["pr_files"].extend(prediction_extra_dict["pr_files"])
+                    else:
+                        original_prediction_dict["pr_files"] = prediction_extra_dict["pr_files"]
                     new_yaml = yaml.dump(original_prediction_dict)
                     if load_yaml(new_yaml, keys_fix_yaml=self.keys_fix):
                         prediction = new_yaml
@@ -368,7 +385,7 @@ class PRDescription:
 
             return prediction
         except Exception as e:
-            get_logger().error(f"Error extending uncovered files {self.pr_id}: {e}")
+            get_logger().exception(f"Error extending uncovered files {self.pr_id}", artifact={"error": e})
             return original_prediction
 
 
@@ -673,8 +690,9 @@ class PRDescription:
                         filename = filename.strip()
                         link = self.git_provider.get_line_link(filename, relevant_line_start=-1)
                     if (not link or not diff_plus_minus) and ('additional files' not in filename.lower()):
-                        get_logger().warning(f"Error getting line link for '{filename}'")
-                        continue
+                        # get_logger().warning(f"Error getting line link for '{filename}'")
+                        link = ""
+                        # continue
 
                     # Add file data to the PR body
                     file_change_description_br = insert_br_after_x_chars(file_change_description, x=(delta - 5))

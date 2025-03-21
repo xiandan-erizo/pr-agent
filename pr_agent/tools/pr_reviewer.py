@@ -95,6 +95,7 @@ class PRReviewer:
             "is_ai_metadata":  get_settings().get("config.enable_ai_metadata", False),
             "related_tickets": get_settings().get('related_tickets', []),
             'duplicate_prompt_examples': get_settings().config.get('duplicate_prompt_examples', False),
+            "date": datetime.datetime.now().strftime('%Y-%m-%d'),
         }
 
         self.token_handler = TokenHandler(
@@ -122,10 +123,10 @@ class PRReviewer:
             if self.incremental.is_incremental and not self._can_run_incremental_review():
                 return None
 
-            if isinstance(self.args, list) and self.args and self.args[0] == 'auto_approve':
-                get_logger().info(f'Auto approve flow PR: {self.pr_url} ...')
-                self.auto_approve_logic()
-                return None
+            # if isinstance(self.args, list) and self.args and self.args[0] == 'auto_approve':
+            #     get_logger().info(f'Auto approve flow PR: {self.pr_url} ...')
+            #     self.auto_approve_logic()
+            #     return None
 
             get_logger().info(f'Reviewing PR: {self.pr_url} ...')
             relevant_configs = {'pr_reviewer': dict(get_settings().pr_reviewer),
@@ -371,7 +372,7 @@ class PRReviewer:
                     else:
                         get_logger().warning(f"Unexpected type for estimated_effort: {type(estimated_effort)}")
                     if 1 <= estimated_effort_number <= 5:  # 1, because ...
-                        review_labels.append(f'Review effort [1-5]: {estimated_effort_number}')
+                        review_labels.append(f'Review effort {estimated_effort_number}/5')
                 if get_settings().pr_reviewer.enable_review_labels_security and get_settings().pr_reviewer.require_security_review:
                     security_concerns = data['review']['security_concerns']  # yes, because ...
                     security_concerns_bool = 'yes' in security_concerns.lower() or 'true' in security_concerns.lower()
@@ -384,7 +385,7 @@ class PRReviewer:
                 get_logger().debug(f"Current labels:\n{current_labels}")
                 if current_labels:
                     current_labels_filtered = [label for label in current_labels if
-                                               not label.lower().startswith('review effort [1-5]:') and not label.lower().startswith(
+                                               not label.lower().startswith('review effort') and not label.lower().startswith(
                                                    'possible security concern')]
                 else:
                     current_labels_filtered = []
@@ -401,21 +402,7 @@ class PRReviewer:
         """
         Auto-approve a pull request if it meets the conditions for auto-approval.
         """
-        if get_settings().pr_reviewer.enable_auto_approval:
-            maximal_review_effort = get_settings().pr_reviewer.maximal_review_effort
-            if maximal_review_effort < 5:
-                current_labels = self.git_provider.get_pr_labels()
-                for label in current_labels:
-                    if label.lower().startswith('review effort [1-5]:'):
-                        effort = int(label.split(':')[1].strip())
-                        if effort > maximal_review_effort:
-                            get_logger().info(
-                                f"Auto-approve error: PR review effort ({effort}) is higher than the maximal review effort "
-                                f"({maximal_review_effort}) allowed")
-                            self.git_provider.publish_comment(
-                                f"Auto-approve error: PR review effort ({effort}) is higher than the maximal review effort "
-                                f"({maximal_review_effort}) allowed")
-                            return
+        if get_settings().config.enable_auto_approval:
             is_auto_approved = self.git_provider.auto_approve()
             if is_auto_approved:
                 get_logger().info("Auto-approved PR")
